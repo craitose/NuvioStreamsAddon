@@ -504,78 +504,27 @@ function fetchWithTimeout(promise, timeoutMs, providerName) {
     });
 }
 
-// Define function to get streams from VidSrc
-async function getVidSrcStreams(tmdbId, mediaType, seasonNum = null, episodeNum = null) {
+// --- VidSrc Provider (simple embed URL version) ---
+async function getVidSrcStreams(imdbId, mediaType, seasonNum = null, episodeNum = null) {
     try {
-        console.log(`[VidSrc] Attempting to fetch streams for TMDB ID: ${tmdbId}, Type: ${mediaType}, Season: ${seasonNum}, Episode: ${episodeNum}`);
+        console.log(`[VidSrc] Fetching embed URL for IMDb: ${imdbId}, Type: ${mediaType}, S${seasonNum}E${episodeNum}`);
 
-        // Convert TMDB ID to IMDb ID for VidSrc
-        // This is a simplified example - you might need to implement proper TMDB to IMDb conversion
-        // For now, assuming we have access to the IMDb ID from the caller
-        let imdbId;
-        if (tmdbId.startsWith('tt')) {
-            imdbId = tmdbId; // Already an IMDb ID
-        } else {
-            // You would need to implement this conversion
-            // For example, using the convertTmdbToImdb function if available
-            // imdbId = await convertTmdbToImdb(tmdbId, mediaType);
-            console.log(`[VidSrc] TMDB ID conversion not implemented yet. Skipping...`);
-            return [];
-        }
-
-        // Format the ID according to VidSrc requirements
-        let vidsrcId;
-        if (mediaType === 'movie') {
-            vidsrcId = imdbId;
-        } else if (mediaType === 'tv' && seasonNum !== null && episodeNum !== null) {
-            vidsrcId = `${imdbId}:${seasonNum}:${episodeNum}`;
-        } else {
-            console.log(`[VidSrc] Invalid parameters for TV show. Need season and episode numbers.`);
-            return [];
-        }
-
-        // Call the getStreamContent function from vidsrcextractor.js
-        const typeForVidSrc = mediaType === 'movie' ? 'movie' : 'series';
-        const results = await getStreamContent(vidsrcId, typeForVidSrc);
+        // Call the simple provider from vidsrcextractor.js
+        const results = await getStreamContent(imdbId, mediaType, seasonNum, episodeNum);
 
         if (!results || results.length === 0) {
-            console.log(`[VidSrc] No streams found for ${vidsrcId}.`);
+            console.log(`[VidSrc] No embed URL returned.`);
             return [];
         }
 
-        // Process the results into the standard stream format
-        const streams = [];
-
-        for (const result of results) {
-            if (result.streams && result.streams.length > 0) {
-                for (const streamInfo of result.streams) {
-                    const quality = streamInfo.quality.includes('x')
-                        ? streamInfo.quality.split('x')[1] + 'p' // Convert "1280x720" to "720p"
-                        : streamInfo.quality; // Keep as is for kbps or unknown
-
-                    streams.push({
-                        title: result.name || "VidSrc Stream",
-                        url: streamInfo.url,
-                        quality: quality,
-                        provider: "VidSrc",
-                        // You can add additional metadata if needed
-                        size: "Unknown size",
-                        languages: ["Unknown"],
-                        subtitles: [],
-                        // If the referer is needed for playback
-                        headers: result.referer ? { referer: result.referer } : undefined
-                    });
-                }
-            }
-        }
-
-        console.log(`[VidSrc] Successfully extracted ${streams.length} streams.`);
-        return streams;
-    } catch (error) {
-        console.error(`[VidSrc] Error fetching streams:`, error.message);
+        // The simple provider already returns the correct structure
+        return results;
+    } catch (err) {
+        console.error(`[VidSrc] Error: ${err.message}`);
         return [];
     }
 }
+
 
 // --- Stream Caching Functions ---
 // Ensure stream cache directory exists
